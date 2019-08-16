@@ -29,11 +29,14 @@ contract FlightSuretyApp {
     struct Flight {
         bool isRegistered;
         uint8 statusCode;
-        uint256 updatedTimestamp;        
+        uint256 updatedTimestamp;
         address airline;
     }
+
+    mapping(bytes32 => address[]) private passengers;
     mapping(bytes32 => Flight) private flights;
 
+    FlightSuretyData dataContract;
  
     /********************************************************************************************/
     /*                                       FUNCTION MODIFIERS                                 */
@@ -77,6 +80,7 @@ contract FlightSuretyApp {
                                 public 
     {
         contractOwner = msg.sender;
+        dataContract = FlightSuretyData(_contractAddress);
     }
 
     /********************************************************************************************/
@@ -364,4 +368,34 @@ function creditInsurees(address passenger, bytes32 flight) internal
 
 // endregion
 
-}   
+}
+
+// region Data Contract
+
+    contract FlightSuretyData {
+
+        function registerAirline
+                                (
+                                    address airlineAddress,
+                                    string name
+                                )
+                                external;
+        
+        function getAirline(address _airlineAddress) external view returns(string name, bool isRegistered, bool isFunded);
+
+        function getAirlineCount() external view returns(uint256);
+
+        function getFundedAirlineCount() external view returns(uint256);
+
+        function fundAirline(address airline) external payable;
+
+        function buy(address passengerAddress, bytes32 flight) external payable;
+
+        function creditInsurees(address passengerAddress, uint256 amount, bytes32 flight) external;
+        
+        function withdraw(address passengerAddress, bytes32 flight) external;
+
+        function getPassengerPurchase(address passengerAddress, bytes32 flight) external view returns(uint256 balance, uint256 insuranceCredit);
+    }
+
+// endregion

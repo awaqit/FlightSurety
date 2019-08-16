@@ -12,6 +12,21 @@ contract FlightSuretyData {
     address private contractOwner;                                      // Account used to deploy contract
     bool private operational = true;                                    // Blocks all state changes throughout the contract if false
 
+    struct Passenger {
+        uint256 balance;
+        uint256 insuranceCredit;
+    }
+
+    struct Airline {
+        string name;
+        bool isRegistered;
+        bool isFunded;
+        uint256 fund;
+    }
+
+    mapping (address => Airline) airlines;
+    mapping (address => mapping(bytes32 => Passenger)) passengers;
+
     /********************************************************************************************/
     /*                                       EVENT DEFINITIONS                                  */
     /********************************************************************************************/
@@ -125,10 +140,14 @@ contract FlightSuretyData {
     */
     function creditInsurees
                                 (
+                                    address passengerAddres,
+                                    uint256 amount,
+                                    bytes32 flight
                                 )
                                 external
                                 pure
     {
+        passengers[passengerAddres][flight].insuranceCredit = amount;
     }
     
 
