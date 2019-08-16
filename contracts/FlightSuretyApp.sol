@@ -165,11 +165,16 @@ contract FlightSuretyApp {
     function fetchFlightStatus
                         (
                             address airline,
-                            string flight,
-                            uint256 timestamp                            
+                            string memory flight,
+                            uint256 timestamp
                         )
                         external
     {
+        bytes32 flightKey = getFlightKey(airline, flight, timestamp);
+
+        require(flights[flightKey].isRegistered, "Flight is not registered");
+        require(flights[flightKey].statusCode == STATUS_CODE_UNKNOWN, 'Flight has landed!');
+
         uint8 index = getRandomIndex(msg.sender);
 
         // Generate a unique key for storing the request
@@ -180,7 +185,7 @@ contract FlightSuretyApp {
                                             });
 
         emit OracleRequest(index, airline, flight, timestamp);
-    } 
+    }
 
 
 function creditInsurees(address passenger, bytes32 flight) internal
