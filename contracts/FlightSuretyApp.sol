@@ -5,7 +5,7 @@ pragma solidity >=0.4.24;
 // More info: https://www.nccgroup.trust/us/about-us/newsroom-and-events/blog/2018/november/smart-contract-insecurity-bad-arithmetic/
 
 import "../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol";
-
+import "./FlightSuretyData.sol";
 /************************************************** */
 /* FlightSurety Smart Contract                      */
 /************************************************** */
@@ -23,6 +23,7 @@ contract FlightSuretyApp {
     uint8 private constant STATUS_CODE_LATE_WEATHER = 30;
     uint8 private constant STATUS_CODE_LATE_TECHNICAL = 40;
     uint8 private constant STATUS_CODE_LATE_OTHER = 50;
+    uint private constant REGISTERING_AIRLINE_WITHOUT_CONSENSUS = 4;
 
     address private contractOwner;          // Account used to deploy contract
 
@@ -33,9 +34,16 @@ contract FlightSuretyApp {
         address airline;
     }
 
+    struct Airline {
+        string name;
+        bool isNew;
+    }
+
+
     mapping(bytes32 => address[]) private passengers;
     mapping(bytes32 => Flight) private flights;
-
+    mapping (address => Airline) newAirlines;
+    mapping (address => address[]) votes;
     FlightSuretyData dataContract;
  
     /********************************************************************************************/
@@ -65,6 +73,21 @@ contract FlightSuretyApp {
         require(msg.sender == contractOwner, "Caller is not contract owner");
         _;
     }
+
+    modifier requireFundedAirline(address airline) {
+        bool Funded;
+        (,,Funded) = dataContract.getAirline(airline);
+        require(Funded, "Airline is not funded");
+        _;
+    }
+
+    modifier requireNotRegisteredAirline(address airline) {
+        bool Registered;
+        (,,Registered) = dataContract.getAirline(airline);
+        require(!Registered, "Airline is not Registered yet!");
+        _;
+    }
+
 
     /********************************************************************************************/
     /*                                       CONSTRUCTOR                                        */
@@ -106,12 +129,23 @@ contract FlightSuretyApp {
     function registerAirline
                             (
                                 address airlineAddress,
-                                string airlineName 
+                                string memory airlineName 
                             )
                             external
-                            returns(bool success, uint256 votes)
+                            requireFundedAirline(msg.sender)
+                            requireNotRegisteredAirline(msg.sender)
     {
-        return (success, 0);
+        require(newAirlines[airlineAddress].isNew == true, "Airline is not regiterd yet!");
+
+        if(dataContract.getAirlineCount() < REGISTERING_AIRLINE_WITHOUT_CONSENSUS)
+        {
+            dataContract.registerAirline(airlineAddress, airlineName);
+        }
+        else
+        {
+            newAirlines[airlineAddress] = Airline(name, false);
+        }
+
     }
 
 
@@ -121,8 +155,10 @@ contract FlightSuretyApp {
     */  
     function registerFlight
                                 (
-                                    string flight, uint256timestamp
+                                    string flight,
+                                    uint256 timestamp
                                 )
+                                requireFundedAirline(msg.sender)
                                 external
     {
         bytes32 flightKey = getFlightKey(msg.sender, flight, timestamp);
@@ -135,7 +171,7 @@ contract FlightSuretyApp {
    /**
     * @dev Called after oracle has updated flight status
     *
-    */  
+    */
     function processFlightStatus
                                 (
                                     address airline,
@@ -188,7 +224,7 @@ contract FlightSuretyApp {
     }
 
 
-function creditInsurees(address passenger, bytes32 flight) internal
+    function creditInsurees(address passenger, bytes32 flight) internal
     {
 
         uint256 balance;
@@ -197,11 +233,41 @@ function creditInsurees(address passenger, bytes32 flight) internal
         dataContract.creditInsurees(passenger, balance.div(uint256(2)), flight);
     }
 
-    function withdraw(address airline, string flight, uint256 timestamp) external
+    function withdraw(address airline, string memory flight, uint256 timestamp) external
     {
         bytes32 key = getFlightKey(airline, flight, timestamp);
 
         dataContract.withdraw(msg.sender, key);
+    }
+
+
+    function voteAirline(address airline)
+        external
+        requireFundedAirline(msg.sender)
+        requireNotRegisteredAirline(airline)
+    {
+        require(dataContract.getAirlineCount() >= REGISTERING_AIRLINE_WITHOUT_CONSENSUS, "Less than voting threshold");
+        require(newAirlines[airlineAddress].isNew == false, "Airline Already regiterd!");
+
+        bool isDuplicate = false;
+
+        for(uint i = 0; i < votes[airline].length; i++)
+        {
+            if(votes[airline][i] == msg.sender) {
+                isDuplicate = true;
+                break;
+            }
+        }
+
+        require(!isDuplicate, "Already voted!");
+
+        votes[airline].push(msg.sender);
+
+        if(votes[airline].length > (dataContract.getFundedAirlineCount().div(2))) {
+            dataContract.registerAirline(airline, newAirlines[airline].name);
+            delete newAirlines[airline];
+            delete votes[airline];
+        }
     }
 
 
@@ -378,33 +444,3 @@ function creditInsurees(address passenger, bytes32 flight) internal
 // endregion
 
 }
-
-// region Data Contract
-
-    contract FlightSuretyData {
-
-        function registerAirline
-                                (
-                                    address airlineAddress,
-                                    string name
-                                )
-                                external;
-        
-        function getAirline(address _airlineAddress) external view returns(string name, bool isRegistered, bool isFunded);
-
-        function getAirlineCount() external view returns(uint256);
-
-        function getFundedAirlineCount() external view returns(uint256);
-
-        function fundAirline(address airline) external payable;
-
-        function buy(address passengerAddress, bytes32 flight) external payable;
-
-        function creditInsurees(address passengerAddress, uint256 amount, bytes32 flight) external;
-        
-        function withdraw(address passengerAddress, bytes32 flight) external;
-
-        function getPassengerPurchase(address passengerAddress, bytes32 flight) external view returns(uint256 balance, uint256 insuranceCredit);
-    }
-
-// endregion
