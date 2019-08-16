@@ -121,7 +121,7 @@ contract FlightSuretyApp {
                                 external
                                 pure
     {
-
+        bytes32 key = getFlightKey(msg.sender, flight, timestamp);
     }
     
    /**
@@ -136,8 +136,20 @@ contract FlightSuretyApp {
                                     uint8 statusCode
                                 )
                                 internal
-                                pure
     {
+        bytes32 flightKey = getFlightKey(airline, flight, timestamp);
+        require(flights[flightKey].isRegistered, "Flight is not registered");
+
+        flights[flightKey].statusCode = statusCode;
+
+        if(flights[flightKey].statusCode == STATUS_CODE_LATE_AIRLINE) {
+            for(uint8 i = 0; i < passengers[flightKey].length; i++) {
+
+              creditInsurees(flightPassengers[key][i], flightKey);
+
+            }
+        }
+
     }
 
 
@@ -161,6 +173,24 @@ contract FlightSuretyApp {
 
         emit OracleRequest(index, airline, flight, timestamp);
     } 
+
+
+function creditInsurees(address passenger, bytes32 flight) internal
+    {
+
+        uint256 balance;
+        (balance,) = dataContract.getPassengerPurchase(passenger, key);
+
+        dataContract.creditInsurees(passenger, balance.div(uint256(2)), flight);
+    }
+
+    function withdraw(address airline, string flight, uint256 timestamp) external
+    {
+        bytes32 key = getFlightKey(airline, flight, timestamp);
+
+        dataContract.withdraw(msg.sender, key);
+    }
+
 
 
 // region ORACLE MANAGEMENT
