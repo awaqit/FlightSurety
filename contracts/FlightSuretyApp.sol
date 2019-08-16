@@ -89,7 +89,6 @@ contract FlightSuretyApp {
 
     function isOperational() 
                             public 
-                            pure 
                             returns(bool) 
     {
         return true;  // Modify to call data contract's status
@@ -105,10 +104,11 @@ contract FlightSuretyApp {
     *
     */   
     function registerAirline
-                            (   
+                            (
+                                address airlineAddress,
+                                string airlineName 
                             )
                             external
-                            pure
                             returns(bool success, uint256 votes)
     {
         return (success, 0);
@@ -121,11 +121,15 @@ contract FlightSuretyApp {
     */  
     function registerFlight
                                 (
+                                    string flight, uint256timestamp
                                 )
                                 external
-                                pure
     {
-        bytes32 key = getFlightKey(msg.sender, flight, timestamp);
+        bytes32 flightKey = getFlightKey(msg.sender, flight, timestamp);
+        require(!flights[flightKey].isRegistered, "Flight is already registered");
+
+        flights[flightKey] = Flight(true, STATUS_CODE_UNKNOWN, timestamp, msg.sender);
+        passengers[key] = new address[](0);
     }
     
    /**
