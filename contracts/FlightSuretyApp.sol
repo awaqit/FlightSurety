@@ -58,7 +58,7 @@ contract FlightSuretyApp {
     *      This is used on all state changing functions to pause the contract in 
     *      the event there is an issue that needs to be fixed
     */
-    modifier requireIsOperational() 
+    modifier requireIsOperational()
     {
          // Modify to call data contract's status
         require(true, "Contract is currently not operational");  
@@ -129,7 +129,7 @@ contract FlightSuretyApp {
     function registerAirline
                             (
                                 address airlineAddress,
-                                string memory airlineName 
+                                string memory airlineName
                             )
                             external
                             requireFundedAirline(msg.sender)
@@ -155,7 +155,7 @@ contract FlightSuretyApp {
     */  
     function registerFlight
                                 (
-                                    string flight,
+                                    string memory flight,
                                     uint256 timestamp
                                 )
                                 requireFundedAirline(msg.sender)
@@ -182,7 +182,7 @@ contract FlightSuretyApp {
                                 internal
     {
         bytes32 flightKey = getFlightKey(airline, flight, timestamp);
-        require(flights[flightKey].isRegistered, "Flight is not registered");
+        require(flights[flightKey].isRegistered, "Flight is not registered yet!");
 
         flights[flightKey].statusCode = statusCode;
 
@@ -235,9 +235,9 @@ contract FlightSuretyApp {
 
     function withdraw(address airline, string memory flight, uint256 timestamp) external
     {
-        bytes32 key = getFlightKey(airline, flight, timestamp);
+        bytes32 flightKey = getFlightKey(airline, flight, timestamp);
 
-        dataContract.withdraw(msg.sender, key);
+        dataContract.withdraw(msg.sender, flightKey);
     }
 
 
@@ -249,17 +249,17 @@ contract FlightSuretyApp {
         require(dataContract.getAirlineCount() >= REGISTERING_AIRLINE_WITHOUT_CONSENSUS, "Less than voting threshold");
         require(newAirlines[airlineAddress].isNew == false, "Airline Already regiterd!");
 
-        bool isDuplicate = false;
+        bool duplicate = false;
 
         for(uint i = 0; i < votes[airline].length; i++)
         {
             if(votes[airline][i] == msg.sender) {
-                isDuplicate = true;
+                duplicate = true;
                 break;
             }
         }
 
-        require(!isDuplicate, "Already voted!");
+        require(!duplicate, "Already voted!");
 
         votes[airline].push(msg.sender);
 
