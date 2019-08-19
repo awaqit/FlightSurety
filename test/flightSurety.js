@@ -13,6 +13,7 @@ contract('Flight Surety Tests', async (accounts) => {
   var config;
   before('setup contract', async () => {
     config = await Test.Config(accounts);
+    oracles = accounts.slice(9, 30);
     await config.flightSuretyData.authorizeCaller(config.flightSuretyApp.address);
   });
 
@@ -96,5 +97,145 @@ contract('Flight Surety Tests', async (accounts) => {
 
   });
  
+  it('(airline) first airline was registered', async () => {
+    let result = await config.flightSuretyData.isAirline(config.firstAirline);
+
+    assert.equal(result, true, "First airline was registered");
+});
+
+
+it('(airline) fail registering duplicate airline', async () => {
+    let result = true;
+
+    try {
+        let newAirline = accounts[2];
+        let airlineName = 'New Airline';
+        
+        await config.flightSuretyApp.registerAirline(newAirline, airlineName, {
+            from: config.firstAirline
+        });
+
+        result = false;
+    } catch (e) {
+        if (e.reason !== 'Airline already Registered!') {
+            result = false;
+            console.log(e);
+        }
+    }
+
+    assert.equal(result, true, 'Should not register duplicate airline');
+});
+
+it('(mutliparty) 5th airline should not be registered if less than 50% votes', async () => {
+
+    let result = true;
+    let votingAirlines = accounts.slice(3, 5);
+    let testAirline = accounts[7];
+    let testAirlineName = 'Test Airline';
+
+    try {
+  
+        for (let i = 0; i < votingAirlines.length; i++) {
+            let a = votingAirlines[i];
+            
+            await config.flightSuretyApp.registerAirline(a, `Voting Airline ${i}`, {
+                from: config.firstAirline
+            });
+        }
+
+        await config.flightSuretyApp.registerAirline(testAirline, testAirlineName, {
+            from: config.firstAirline
+        });
+
+        result = await config.flightSuretyData.isAirline(testAirline);
+    } catch (e) {
+        console.log(e);
+    }
+
+    assert.equal(result, false, 'Airline should not be registered if less than 50% votes');
+});
+
+it('(mutliparty) 5th airline should be registered if more than 50% votes', async () => {
+    let result = false;
+    let testAirline = accounts[6];
+
+    try {
+        await config.flightSuretyApp.voteAirline(testAirline, {
+            from: config.firstAirline
+        });
+
+        result = await config.flightSuretyData.isAirline(testAirline);
+
+
+    } catch (e) {
+        console.log(e);
+    }
+
+    assert.equal(result, true, 'Airline should not be registered if less than 50% votes');
+});
+
+it('(Flight) funded airlines are able to register flights', async () => {
+    let result = true;
+
+    try {
+        await config.flightSuretyApp.registerFlight(flight, timestamp, {
+            from: config.firstAirline
+        });
+    } catch (e) {
+        console.log(e);
+        result = false;
+    }
+
+    assert.equal(result, true, 'Funded airlines should be able to register flight');
+});
+
+it('can register oracles', async () => {
+    
+    // ARRANGE
+    let fee = await config.flightSuretyApp.REGISTRATION_FEE.call();
+    
+    // ACT
+    for(let a=1; a< oracles.length; a++) {      
+      await config.flightSuretyApp.registerOracle({ from: oracles[a], value: fee });
+      let result = await config.flightSuretyApp.getMyIndexes.call({from: oracles[a]});
+      console.log(`Oracle Registered: ${result[0]}, ${result[1]}, ${result[2]}`);
+    }
+  });
+
+  it('can request flight status', async () => {
+    
+    // ARRANGE
+    let flight = 'ND1309'; // Course number
+    let timestamp = Math.floor(Date.now() / 1000);
+
+    // Submit a request for oracles to get status information for a flight
+    await config.flightSuretyApp.fetchFlightStatus(config.firstAirline, flight, timestamp);
+    // ACT
+
+    // Since the Index assigned to each test account is opaque by design
+    // loop through all the accounts and for each account, all its Indexes (indices?)
+    // and submit a response. The contract will reject a submission if it was
+    // not requested so while sub-optimal, it's a good test of that feature
+    for(let a=0; a< oracles.length; a++) {
+
+      // Get oracle information
+      let oracleIndexes = await config.flightSuretyApp.getMyIndexes.call({ from: oracles[a]});
+      for(let idx=0;idx<oracleIndexes.length;idx++) {
+
+        try {
+          // Submit a response...it will only be accepted if there is an Index match
+          await config.flightSuretyApp.submitOracleResponse(oracleIndexes[idx], config.firstAirline, flight, timestamp, STATUS_CODE_ON_TIME, { from: accounts[a] });
+
+        }
+        catch(e) {
+          // Enable this when debugging
+           console.log('\nError', idx, oracleIndexes[idx].toNumber(), flight, timestamp);
+        }
+
+      }
+    }
+
+
+  });
 
 });

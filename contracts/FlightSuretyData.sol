@@ -49,6 +49,7 @@ contract FlightSuretyData {
         contractOwner = msg.sender;
         airlines[airlineAddress].isRegistered = true;
         airlines[airlineAddress].name = airlineName;
+        airlines[airlineAddress].isFunded = true;
         airlines[airlineAddress].fund = 0;
 
         airlinesCount = 1;
@@ -114,7 +115,7 @@ contract FlightSuretyData {
                                 bool mode
                             ) 
                             external
-                            requireContractOwner 
+                            requireContractOwner
     {
         operational = mode;
     }
@@ -140,7 +141,7 @@ contract FlightSuretyData {
         return fundedAirlinesCount;
     }
 
-    function getAirline(address _airlineAddress) 
+    function getAirline(address _airlineAddress)
         external
         view
         requireAuthorizedCaller

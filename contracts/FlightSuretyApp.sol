@@ -83,8 +83,8 @@ contract FlightSuretyApp {
 
     modifier requireNotRegisteredAirline(address airline) {
         bool Registered;
-        (,,Registered) = dataContract.getAirline(airline);
-        require(!Registered, "Airline is not Registered yet!");
+        (,Registered,) = dataContract.getAirline(airline);
+        require(!Registered, "Airline already Registered!");
         _;
     }
 
@@ -134,9 +134,9 @@ contract FlightSuretyApp {
                             )
                             external
                             requireFundedAirline(msg.sender)
-                            requireNotRegisteredAirline(msg.sender)
+                            requireNotRegisteredAirline(airlineAddress)
     {
-        require(newAirlines[airlineAddress].isNew == true, "Airline is not regiterd yet!");
+        // require(newAirlines[airlineAddress].isNew == true, "Airline is not regiterd yet!");
 
         if(dataContract.getAirlineCount() < REGISTERING_AIRLINE_WITHOUT_CONSENSUS)
         {
