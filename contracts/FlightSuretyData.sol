@@ -164,7 +164,7 @@ contract FlightSuretyData {
     function registerAirline
                             ( 
                                 address airlineAddress,
-                                string memory name
+                                string name
                             )
                             external
     {
@@ -191,7 +191,7 @@ contract FlightSuretyData {
                             external
                             payable
     {
-        passengers[passengerAddress][flight] = PassengerPurchase(msg.value, 0 ether);
+        passengers[passengerAddress][flight] = Passenger(msg.value, 0 ether);
     }
 
     /**

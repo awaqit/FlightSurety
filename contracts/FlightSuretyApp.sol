@@ -99,11 +99,12 @@ contract FlightSuretyApp {
     */
     constructor
                                 (
+                                    address contractAddress
                                 ) 
                                 public 
     {
         contractOwner = msg.sender;
-        dataContract = FlightSuretyData(_contractAddress);
+        dataContract = FlightSuretyData(contractAddress);
     }
 
     /********************************************************************************************/
@@ -129,7 +130,7 @@ contract FlightSuretyApp {
     function registerAirline
                             (
                                 address airlineAddress,
-                                string memory airlineName
+                                string airlineName
                             )
                             external
                             requireFundedAirline(msg.sender)
@@ -143,7 +144,7 @@ contract FlightSuretyApp {
         }
         else
         {
-            newAirlines[airlineAddress] = Airline(name, false);
+            newAirlines[airlineAddress] = Airline(airlineName, false);
         }
 
     }
@@ -155,7 +156,7 @@ contract FlightSuretyApp {
     */  
     function registerFlight
                                 (
-                                    string memory flight,
+                                    string flight,
                                     uint256 timestamp
                                 )
                                 requireFundedAirline(msg.sender)
@@ -165,7 +166,7 @@ contract FlightSuretyApp {
         require(!flights[flightKey].isRegistered, "Flight is already registered");
 
         flights[flightKey] = Flight(true, STATUS_CODE_UNKNOWN, timestamp, msg.sender);
-        passengers[key] = new address[](0);
+        passengers[flightKey] = new address[](0);
     }
     
    /**
@@ -189,7 +190,7 @@ contract FlightSuretyApp {
         if(flights[flightKey].statusCode == STATUS_CODE_LATE_AIRLINE) {
             for(uint8 i = 0; i < passengers[flightKey].length; i++) {
 
-              creditInsurees(flightPassengers[key][i], flightKey);
+              creditInsurees(passengers[flightKey][i], flightKey);
 
             }
         }
@@ -201,7 +202,7 @@ contract FlightSuretyApp {
     function fetchFlightStatus
                         (
                             address airline,
-                            string memory flight,
+                            string flight,
                             uint256 timestamp
                         )
                         external
@@ -228,12 +229,12 @@ contract FlightSuretyApp {
     {
 
         uint256 balance;
-        (balance,) = dataContract.getPassengerPurchase(passenger, key);
+        (balance,) = dataContract.getPassengerPurchase(passenger, flight);
 
         dataContract.creditInsurees(passenger, balance.div(uint256(2)), flight);
     }
 
-    function withdraw(address airline, string memory flight, uint256 timestamp) external
+    function withdraw(address airline, string flight, uint256 timestamp) external
     {
         bytes32 flightKey = getFlightKey(airline, flight, timestamp);
 
@@ -247,7 +248,7 @@ contract FlightSuretyApp {
         requireNotRegisteredAirline(airline)
     {
         require(dataContract.getAirlineCount() >= REGISTERING_AIRLINE_WITHOUT_CONSENSUS, "Less than voting threshold");
-        require(newAirlines[airlineAddress].isNew == false, "Airline Already regiterd!");
+        require(newAirlines[airline].isNew == false, "Airline Already regiterd!");
 
         bool duplicate = false;
 

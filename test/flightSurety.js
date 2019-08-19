@@ -4,6 +4,12 @@ var BigNumber = require('bignumber.js');
 
 contract('Flight Surety Tests', async (accounts) => {
 
+  let passenger = accounts[7];
+  const MAX_INSURANCE_AMOUNT = web3.utils.toWei('1', 'ether');
+  let flight = 'BDND 101';
+  let timestamp = Math.floor(new Date().getTime() / 1000);
+  let oracles = accounts.slice(9, 30);
+
   var config;
   before('setup contract', async () => {
     config = await Test.Config(accounts);
@@ -78,7 +84,7 @@ contract('Flight Surety Tests', async (accounts) => {
 
     // ACT
     try {
-        await config.flightSuretyApp.registerAirline(newAirline, {from: config.firstAirline});
+        await config.flightSuretyApp.registerAirline(newAirline,'UA AirLine', {from: config.firstAirline});
     }
     catch(e) {
 

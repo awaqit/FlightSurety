@@ -6,9 +6,7 @@ module.exports = {
     development: {
       host: '127.0.0.1',
       port: 8545,
-      network_id: '*',
-      gas: 300000000,
-      gasPrice: 20000000000
+      network_id: '*'
     },
     // development: {
     //   provider: function() {
