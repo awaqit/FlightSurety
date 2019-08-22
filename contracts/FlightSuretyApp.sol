@@ -24,7 +24,7 @@ contract FlightSuretyApp {
     uint8 private constant STATUS_CODE_LATE_TECHNICAL = 40;
     uint8 private constant STATUS_CODE_LATE_OTHER = 50;
     uint private constant REGISTERING_AIRLINE_WITHOUT_CONSENSUS = 4;
-
+    uint256 public constant MAX_FLIGHT_INSURACE = 1 ether;
     address private contractOwner;          // Account used to deploy contract
 
     struct Flight {
@@ -80,6 +80,12 @@ contract FlightSuretyApp {
         require(Funded, "Airline is not funded");
         _;
     }
+    modifier requireRegisteredAirline(address airline) {
+        bool Registered;
+        (,Registered,) = dataContract.getAirline(airline);
+        require(Registered, "Airline is Not Registered!");
+        _;
+    }
 
     modifier requireNotRegisteredAirline(address airline) {
         bool Registered;
@@ -100,7 +106,7 @@ contract FlightSuretyApp {
     constructor
                                 (
                                     address contractAddress
-                                ) 
+                                )
                                 public 
     {
         contractOwner = msg.sender;
@@ -111,9 +117,9 @@ contract FlightSuretyApp {
     /*                                       UTILITY FUNCTIONS                                  */
     /********************************************************************************************/
 
-    function isOperational() 
-                            public 
-                            returns(bool) 
+    function isOperational()
+                            public
+                            returns(bool)
     {
         return true;  // Modify to call data contract's status
     }
@@ -136,7 +142,7 @@ contract FlightSuretyApp {
                             requireFundedAirline(msg.sender)
                             requireNotRegisteredAirline(airlineAddress)
     {
-        // require(newAirlines[airlineAddress].isNew == true, "Airline is not regiterd yet!");
+        require(newAirlines[airlineAddress].isNew != true, "Airline is not regiterd yet!");
 
         if(dataContract.getAirlineCount() < REGISTERING_AIRLINE_WITHOUT_CONSENSUS)
         {
@@ -168,7 +174,16 @@ contract FlightSuretyApp {
         flights[flightKey] = Flight(true, STATUS_CODE_UNKNOWN, timestamp, msg.sender);
         passengers[flightKey] = new address[](0);
     }
-    
+
+    function fundAirline()
+        external
+        payable
+        requireRegisteredAirline(msg.sender)
+
+    {
+        dataContract.fundAirline.value(msg.value)(msg.sender);
+    }
+
    /**
     * @dev Called after oracle has updated flight status
     *
@@ -271,7 +286,17 @@ contract FlightSuretyApp {
         }
     }
 
+    function buyInsurance(address airline, string flight, uint256 timestamp) external payable
+    {
+        require(msg.value <= MAX_FLIGHT_INSURACE, "Exceeded max allowed insurance amount");
 
+        bytes32 key = getFlightKey(airline, flight, timestamp);
+
+        require(flights[key].isRegistered, "Flight is not registered");
+
+        passengers[key].push(msg.sender);
+        dataContract.buy.value(msg.value)(msg.sender, key);
+    }
 
 // region ORACLE MANAGEMENT
 

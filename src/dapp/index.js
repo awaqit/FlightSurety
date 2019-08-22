@@ -3,13 +3,22 @@ import DOM from './dom';
 import Contract from './contract';
 import './flightsurety.css';
 
+let flightStatus = {
+    10: 'On Time 👌',
+    20: 'Late due to airline 😢',
+    30: 'Late due to weather 🌩',
+    40: 'Late due to technical diffeculties 🛠',
+    50: 'Late due to other issues 🤷‍♂️'
+};
+
+let insuredFlight = [];
 
 (async() => {
 
     let result = null;
 
     let contract = new Contract('localhost', () => {
-
+        console.log(contract);
         // Read transaction
         contract.isOperational((error, result) => {
             console.log(error,result);
@@ -25,6 +34,41 @@ import './flightsurety.css';
                 display('Oracles', 'Trigger oracles', [ { label: 'Fetch Flight Status', error: error, value: result.flight + ' ' + result.timestamp} ]);
             });
         })
+
+        DOM.elid('buy-insurance').addEventListener('click', () => {
+            
+            let flight = contract.flights[DOM.elid('flight-number').selectedIndex];
+
+            if (!flight) {
+                return;
+            }
+
+            contract.buyInsurance(flight, (error, result) => {
+                display('Buy insurance', '', [{
+                    label: 'Operation',
+                    error,
+                    value: 'successful'
+                }]);
+
+                if (!error) {
+                    insuredFlight.push(result);
+
+                    let option = document.createElement('option');
+                    option.innerHTML = result.name;
+
+                    DOM.elid('bought-flight').appendChild(option);
+                }
+            });
+        });
+
+        // contract.trackFlightStatus((error, args) => {
+        //     display('Flight Status Update', '', [{
+        //         label: args ? args.flight : '',
+        //         error: error,
+        //         value: args ? flightStatus[args.status] : ''
+        //     }]);
+        // });
+
     
     });
     
