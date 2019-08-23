@@ -11,10 +11,15 @@ export default class Contract {
         this.web3 = new Web3(new Web3.providers.HttpProvider(config.url));
         this.flightSuretyApp = new this.web3.eth.Contract(FlightSuretyApp.abi, config.appAddress);
         this.flightSuretyData = new this.web3.eth.Contract(FlightSuretyData.abi, config.dataAddress);
-        this.initialize(callback);
+        
         this.owner = null;
         this.airlines = [];
         this.passengers = [];
+
+        this.gasOptions = {
+            gas: 4712388,
+            gasPrice: 100000000000
+        }
 
         this.flights = [{
             name: 'XY 001',
@@ -24,6 +29,8 @@ export default class Contract {
             name: 'XY 002',
             timestamp: Math.floor(Date.now() / 1000)
         }];
+
+        this.initialize(callback);
     }
 
     initialize(callback) {
@@ -31,9 +38,9 @@ export default class Contract {
         this.web3.eth.getAccounts(async (error, accts) => {
            
             this.owner = accts[0];
-
             await self.flightSuretyData.methods.authorizeCaller(self.flightSuretyApp.options.address).send({
-                from: self.owner
+                from: self.owner,
+                ...self.gasOptions
             });
 
             let counter = 1;
@@ -45,29 +52,21 @@ export default class Contract {
             while(this.passengers.length < 5) {
                 this.passengers.push(accts[counter++]);
             }
-            // await this.flightSuretyApp.methods.registerAirline(accts[0], 'first').call();
-
-            console.log(await this.flightSuretyData.methods.isAirline(accts[0]).call());
-
-
-            console.log(accts[0]);
-            console.log(this.airlines);
-            console.log(this.passengers);
-            console.log(this.flightSuretyApp);
-            console.log(this.flightSuretyData);
-
+            
             // await self.flightSuretyApp.methods.fundAirline().send({
             //     from: this.airlines[0],
             //     value: self.web3.utils.toWei('10', 'ether')
             // });
 
-            // for (let i = 0; i < self.flights.length; i++) {
-            //     await self.flightSuretyApp.methods
-            //         .registerFlight(self.flights[i].name, self.flights[i].timestamp)
-            //         .send({
-            //             from: self.airlines[0]
-            //         });
-            // }
+            for (let i = 0; i < self.flights.length; i++) {
+               let result = await self.flightSuretyApp.methods
+                    .registerFlight(self.flights[i].name, self.flights[i].timestamp)
+                    .send({
+                        from: self.airlines[0],
+            ...self.gasOptions
+                    });
+
+            }
 
             callback();
         });
@@ -84,13 +83,13 @@ export default class Contract {
         let self = this;
         let payload = {
             airline: self.airlines[0],
-            flight: flight,
-            timestamp: Math.floor(Date.now() / 1000)
+            flight: flight.name,
+            timestamp: flight.timestamp
         }
 
         self.flightSuretyApp.methods
             .fetchFlightStatus(payload.airline, payload.flight, payload.timestamp)
-            .send({ from: self.owner}, (error, result) => {
+            .send({ from: self.owner, ...self.gasOptions}, (error, result) => {
                 callback(error, payload);
             });
     }

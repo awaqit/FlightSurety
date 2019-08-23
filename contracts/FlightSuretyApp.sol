@@ -139,7 +139,6 @@ contract FlightSuretyApp {
                                 string airlineName
                             )
                             external
-                            requireFundedAirline(msg.sender)
                             requireNotRegisteredAirline(airlineAddress)
     {
         require(newAirlines[airlineAddress].isNew != true, "Airline is not regiterd yet!");
@@ -165,7 +164,6 @@ contract FlightSuretyApp {
                                     string flight,
                                     uint256 timestamp
                                 )
-                                requireFundedAirline(msg.sender)
                                 external
     {
         bytes32 flightKey = getFlightKey(msg.sender, flight, timestamp);

@@ -28,7 +28,9 @@ let insuredFlight = [];
 
         // User-submitted transaction
         DOM.elid('submit-oracle').addEventListener('click', () => {
-            let flight = DOM.elid('flight-number').value;
+            let index = DOM.elid('bought-flight').selectedIndex;
+            console.log(index);
+            let flight = insuredFlight[index];
             // Write transaction
             contract.fetchFlightStatus(flight, (error, result) => {
                 display('Oracles', 'Trigger oracles', [ { label: 'Fetch Flight Status', error: error, value: result.flight + ' ' + result.timestamp} ]);
@@ -52,7 +54,7 @@ let insuredFlight = [];
 
                 if (!error) {
                     insuredFlight.push(result);
-
+                    console.log(insuredFlight);
                     let option = document.createElement('option');
                     option.innerHTML = result.name;
 
